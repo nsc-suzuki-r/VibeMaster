@@ -54,13 +54,33 @@ export default function LevelCard({ level, tasks }: LevelCardProps) {
       return apiRequest("PATCH", `/api/tasks/${taskId}`, { isCompleted });
     },
     onSuccess: () => {
+      // 即座にクエリを無効化して進捗を更新
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/levels"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user-stats"] });
+      
+      // より確実に更新するために、少し遅延してから再度無効化
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/levels"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/user-stats"] });
+      }, 100);
+    },
+    onError: (error) => {
+      console.error("タスク更新エラー:", error);
     }
   });
 
   const handleTaskToggle = (taskId: string, isCompleted: boolean) => {
+    // 楽観的更新：即座にUIを更新
+    queryClient.setQueryData(["/api/tasks"], (oldData: Task[] | undefined) => {
+      if (!oldData) return oldData;
+      return oldData.map(task => 
+        task.id === taskId ? { ...task, isCompleted } : task
+      );
+    });
+    
+    // サーバーに更新を送信
     updateTaskMutation.mutate({ taskId, isCompleted });
   };
 

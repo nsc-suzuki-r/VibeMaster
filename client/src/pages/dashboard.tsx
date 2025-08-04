@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +27,38 @@ export default function Dashboard() {
   const { data: userStats } = useQuery<UserStats>({
     queryKey: ["/api/user-stats"]
   });
+
+  // リアルタイムで全体進捗を計算
+  const calculatedOverallProgress = useMemo(() => {
+    if (levels.length === 0) return 0;
+    
+    const totalLevels = levels.length;
+    const completedLevels = levels.filter(level => level.isCompleted).length;
+    const inProgressLevel = levels.find(level => level.progress > 0 && level.progress < 100);
+    
+    let progress = (completedLevels / totalLevels) * 100;
+    
+    // 進行中のレベルがある場合は、その進捗も加算
+    if (inProgressLevel) {
+      progress += (inProgressLevel.progress / totalLevels);
+    }
+    
+    // タスクの完了状況も考慮して進捗を調整
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(task => task.isCompleted).length;
+    if (totalTasks > 0) {
+      const taskProgress = (completedTasks / totalTasks) * 100;
+      // レベル進捗とタスク進捗の平均を取る
+      progress = (progress + taskProgress) / 2;
+    }
+    
+    return Math.round(progress);
+  }, [levels, tasks]);
+
+  // サーバーからの進捗とクライアント計算の進捗を比較して、より新しい方を使用
+  const overallProgress = userStats?.overallProgress !== undefined 
+    ? Math.max(userStats.overallProgress, calculatedOverallProgress)
+    : calculatedOverallProgress;
 
   const getCurrentLevel = () => {
     const inProgressLevel = levels.find(level => level.progress > 0 && level.progress < 100);
@@ -60,7 +92,7 @@ export default function Dashboard() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Code className="text-primary text-2xl mr-3" />
-              <h1 className="text-xl font-bold text-gray-900">バイブコーディング・ロードマップ</h1>
+              <h1 className="text-xl font-bold text-gray-900">バイブコーディング・マスター</h1>
             </div>
             <nav className="hidden md:flex space-x-8">
               <button className="text-primary border-b-2 border-primary pb-2 font-medium">ダッシュボード</button>
@@ -111,9 +143,9 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">全体進捗</p>
-                  <p className="text-2xl font-bold text-gray-900">{userStats?.overallProgress || 0}%</p>
+                  <p className="text-2xl font-bold text-gray-900">{overallProgress}%</p>
                 </div>
-                <ProgressRing value={userStats?.overallProgress || 0} size={48} />
+                <ProgressRing value={overallProgress} size={48} />
               </div>
             </CardContent>
           </Card>
@@ -166,7 +198,7 @@ export default function Dashboard() {
           {/* Level Cards */}
           <div className="lg:col-span-2">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">学習ロードマップ</h2>
+              <h2 className="text-2xl font-bold text-gray-900">学習マスター</h2>
               <Button className="bg-primary text-white hover:bg-blue-600">
                 <Plus className="mr-2 h-4 w-4" />
                 新しいタスク
