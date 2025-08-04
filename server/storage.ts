@@ -67,8 +67,8 @@ export class MemStorage implements IStorage {
       const level: Level = {
         id: randomUUID(),
         ...levelData,
-        isCompleted: index === 0,
-        progress: index === 0 ? 100 : index === 1 ? 60 : index === 2 ? 20 : 0,
+        isCompleted: false,
+        progress: 0,
         createdAt: new Date(),
       };
       this.levels.set(level.id, level);
@@ -80,10 +80,10 @@ export class MemStorage implements IStorage {
     // Initialize user stats
     this.userStats = {
       id: randomUUID(),
-      streakDays: 12,
+      streakDays: 0,
       lastActivityDate: new Date(),
-      totalTasksCompleted: 8,
-      overallProgress: 34,
+      totalTasksCompleted: 0,
+      overallProgress: 0,
       updatedAt: new Date(),
     };
   }
@@ -142,13 +142,12 @@ export class MemStorage implements IStorage {
     const levelTasks = tasksByLevel[levelNumber as keyof typeof tasksByLevel] || [];
     
     levelTasks.forEach((title, index) => {
-      const isCompleted = levelNumber === 1 || (levelNumber === 2 && index < 2) || (levelNumber === 3 && index === 0);
       const task: Task = {
         id: randomUUID(),
         levelId,
         title,
         description: "",
-        isCompleted,
+        isCompleted: false,
         order: index,
         createdAt: new Date(),
       };
